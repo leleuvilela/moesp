@@ -19,6 +19,10 @@ unsigned long lastFullRefresh = 0;
 int lastMinute = -1;
 int lastDay = -1;
 
+// Button handling
+unsigned long lastButtonPress = 0;
+const unsigned long DEBOUNCE_DELAY = 300;  // ms
+
 // Current time info
 struct tm timeInfo;
 char dateStr[30];
@@ -39,9 +43,17 @@ void updateTimeStrings() {
 }
 
 // Battery reading
-int getBatteryPercentage() {
+float getBatteryVoltage() {
   int raw = analogRead(BATTERY_PIN);
-  float voltage = (raw / 4095.0) * 3.3 * 2; // *2 if using voltage divider
+  Serial.printf("Battery raw ADC: %d\n", raw);
+  const float voltage =
+      (raw / 4095.0) * 3.3 * 2; // Assuming 12-bit ADC and 3.3V ref
+  Serial.printf("Battery voltage: %.2f V\n", voltage);
+  return voltage;
+}
+
+int getBatteryPercentage() {
+  float voltage = getBatteryVoltage();
   int percentage =
       (int)((voltage - BATTERY_MIN_V) / (BATTERY_MAX_V - BATTERY_MIN_V) * 100);
   if (percentage > 100)
@@ -51,13 +63,35 @@ int getBatteryPercentage() {
   return percentage;
 }
 
+// Check if USB/charging (voltage above max battery = external power)
+bool isCharging() {
+  float voltage = getBatteryVoltage();
+  return voltage > BATTERY_MAX_V + 0.1; // If above 4.3V, likely on USB power
+}
+
+// Check button press with debounce
+bool checkButton() {
+  if (digitalRead(BUTTON_PIN) == LOW) {  // Button pressed (active LOW)
+    unsigned long now = millis();
+    if (now - lastButtonPress > DEBOUNCE_DELAY) {
+      lastButtonPress = now;
+      return true;
+    }
+  }
+  return false;
+}
+
 // Draw status bar (WiFi + Battery) in top right corner
 void drawStatusBar() {
   int x = display.width() - 2; // Start from right edge
 
   // Battery icon (rightmost)
-  int batteryPercent = getBatteryPercentage();
-  const unsigned char *battIcon = getBatteryIcon(batteryPercent);
+  const unsigned char *battIcon;
+  if (isCharging()) {
+    battIcon = icon_battery_charging;
+  } else {
+    battIcon = getBatteryIcon(getBatteryPercentage());
+  }
   x -= BATTERY_ICON_WIDTH;
   display.drawBitmap(x, 8, battIcon, BATTERY_ICON_WIDTH, BATTERY_ICON_HEIGHT);
 
@@ -217,9 +251,37 @@ void partialUpdateMessage() {
   display.partialUpdate(0, 55, display.width(), 20);
 }
 
+// Full refresh: sync time, fetch weather, redraw
+void refreshAll() {
+  Serial.println("Button pressed - refreshing...");
+
+  // Re-sync time
+  syncTime();
+
+  // Re-fetch weather
+  if (WiFi.status() == WL_CONNECTED) {
+    weather.fetchWeather();
+  } else {
+    // Try to reconnect WiFi
+    connectWiFi();
+    if (WiFi.status() == WL_CONNECTED) {
+      syncTime();
+      weather.fetchWeather();
+    }
+  }
+
+  // Full screen refresh
+  drawMainScreen();
+  lastFullRefresh = millis();
+  lastWeatherUpdate = millis();
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("\n=== Morning ESP32 E-Ink Display ===");
+
+  // Initialize button pin
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   // Initialize display
   display.begin();
@@ -251,6 +313,12 @@ void setup() {
 
 void loop() {
   unsigned long now = millis();
+
+  // Check button press for manual refresh
+  if (checkButton()) {
+    refreshAll();
+    return;  // Skip rest of loop this iteration
+  }
 
   // Update local time
   if (now - lastTimeUpdate >= TIME_UPDATE_INTERVAL) {
