@@ -1,2 +1,23 @@
 CompileFlags:
   CompilationDatabase: .
+  Add:
+    - -ferror-limit=0
+  Remove:
+    - -mlongcalls
+    - -fstrict-volatile-bitfields
+    - -fno-tree-switch-conversion
+
+Diagnostics:
+  Suppress:
+    - drv_unknown_argument*
+    - attribute_section_invalid_for_target
+    - pp_file_not_found
+    - ovl_no_viable_member_function_in_call
+    - undeclared_var_use_suggest
+    - ovl_no_viable_function_in_call
+    - typecheck_nonviable_condition
+    - ovl_no_viable_subscript
+    - no_template_suggest
+    - typecheck_member_reference_struct_union
+    - fatal_too_many_errors
+    - member_function_call_bad_type

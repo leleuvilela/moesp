@@ -66,7 +66,7 @@ public:
         currentWeather.feelsLike = doc["current"]["feelslike_c"];
         currentWeather.humidity = doc["current"]["humidity"];
         currentWeather.condition =
-            doc["current"]["condition"]["text"].as<String>();
+            doc["current"]["condition"]["text"].as<String>().substring(0, 10);
         currentWeather.icon = doc["current"]["condition"]["icon"].as<String>();
         currentWeather.isDay = doc["current"]["is_day"] == 1;
 
@@ -76,7 +76,7 @@ public:
         currentWeather.maxTemp = forecastDay["maxtemp_c"];
         currentWeather.minTemp = forecastDay["mintemp_c"];
         currentWeather.forecastCondition =
-            forecastDay["condition"]["text"].as<String>();
+            forecastDay["condition"]["text"].as<String>().substring(0, 10);
 
         currentWeather.valid = true;
         lastUpdate = millis();
