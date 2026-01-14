@@ -2,8 +2,10 @@
 #define CONFIG_H
 
 // ==================== WiFi Configuration ====================
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+// #define WIFI_SSID "MEO-7678E0"
+// #define WIFI_PASSWORD "8413d8d54c"
+#define WIFI_SSID "Ainda sem internet"
+#define WIFI_PASSWORD "taseminternet"
 
 // ==================== Time Configuration ====================
 #define NTP_SERVER "0.pt.pool.ntp.org"
@@ -12,7 +14,7 @@
 
 // ==================== Weather API Configuration ====================
 // Get your free API key at: https://www.weatherapi.com/
-#define WEATHER_API_KEY ""
+#define WEATHER_API_KEY "beddfb8faa514e29948102955252612"
 #define WEATHER_LOCATION "Porto,PT" // City name, coordinates, or IP address
 
 // ==================== E-Ink Display Pins ====================
@@ -42,9 +44,14 @@
 // ==================== Display Settings ====================
 #define DISPLAY_ROTATION 1 // 0-3 for different orientations
 
-// ==================== Update Intervals (milliseconds) ====================
-#define TIME_UPDATE_INTERVAL 6000       // Update time every minute
-#define WEATHER_UPDATE_INTERVAL 1800000 // Update weather every 30 minutes
-#define FULL_REFRESH_INTERVAL 3600000   // Full display refresh every hour
+// ==================== Deep Sleep Configuration ====================
+#define SLEEP_DURATION_SEC 60  // Wake every 60 seconds to update display
+#define WEATHER_UPDATE_MIN 30  // Update weather every 30 minutes
+#define FULL_REFRESH_CYCLES 60 // Full display refresh every 60 wakes (~1 hour)
+
+// ==================== Remote Mode Configuration ====================
+#define REMOTE_API_URL "http://192.168.1.173:3000/api/display/status"
+#define REMOTE_CHECK_CYCLES 5 // Check every 5 wakes (5 min) in normal mode
+#define REMOTE_REFRESH_SEC 60 // Refresh every 60 sec in remote mode
 
 #endif // CONFIG_H

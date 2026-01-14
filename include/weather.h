@@ -7,19 +7,21 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
+// RTC-compatible struct (no dynamic allocation)
+// Can be stored in RTC memory to persist across deep sleep
 struct WeatherData {
   float temperature;
   float feelsLike;
   int humidity;
-  String condition;
-  String icon;
+  char condition[16];      // Fixed size for RTC memory
+  char icon[64];           // Fixed size for RTC memory
   bool isDay;
   bool valid;
   // Forecast data
-  int chanceOfRain; // % chance of rain today
+  int chanceOfRain;        // % chance of rain today
   float maxTemp;
   float minTemp;
-  String forecastCondition;
+  char forecastCondition[16];
 };
 
 class WeatherClient {
@@ -65,9 +67,16 @@ public:
         currentWeather.temperature = doc["current"]["temp_c"];
         currentWeather.feelsLike = doc["current"]["feelslike_c"];
         currentWeather.humidity = doc["current"]["humidity"];
-        currentWeather.condition =
-            doc["current"]["condition"]["text"].as<String>().substring(0, 10);
-        currentWeather.icon = doc["current"]["condition"]["icon"].as<String>();
+
+        // Copy strings to fixed-size buffers
+        const char* condText = doc["current"]["condition"]["text"];
+        strncpy(currentWeather.condition, condText ? condText : "", sizeof(currentWeather.condition) - 1);
+        currentWeather.condition[sizeof(currentWeather.condition) - 1] = '\0';
+
+        const char* iconText = doc["current"]["condition"]["icon"];
+        strncpy(currentWeather.icon, iconText ? iconText : "", sizeof(currentWeather.icon) - 1);
+        currentWeather.icon[sizeof(currentWeather.icon) - 1] = '\0';
+
         currentWeather.isDay = doc["current"]["is_day"] == 1;
 
         // Forecast data for today
@@ -75,15 +84,17 @@ public:
         currentWeather.chanceOfRain = forecastDay["daily_chance_of_rain"];
         currentWeather.maxTemp = forecastDay["maxtemp_c"];
         currentWeather.minTemp = forecastDay["mintemp_c"];
-        currentWeather.forecastCondition =
-            forecastDay["condition"]["text"].as<String>().substring(0, 10);
+
+        const char* forecastText = forecastDay["condition"]["text"];
+        strncpy(currentWeather.forecastCondition, forecastText ? forecastText : "", sizeof(currentWeather.forecastCondition) - 1);
+        currentWeather.forecastCondition[sizeof(currentWeather.forecastCondition) - 1] = '\0';
 
         currentWeather.valid = true;
         lastUpdate = millis();
 
         Serial.printf(
             "Weather: %.1f°C, %s, Chuva: %d%%\n", currentWeather.temperature,
-            currentWeather.condition.c_str(), currentWeather.chanceOfRain);
+            currentWeather.condition, currentWeather.chanceOfRain);
 
         http.end();
         return true;
@@ -101,10 +112,18 @@ public:
 
   WeatherData getWeather() { return currentWeather; }
 
+  // Get pointer to weather data (for RTC memory storage)
+  WeatherData* getWeatherPtr() { return &currentWeather; }
+
+  // Load weather data from external source (RTC memory)
+  void setWeather(const WeatherData& data) { currentWeather = data; }
+
   bool isValid() { return currentWeather.valid; }
 
   bool needsUpdate() {
-    return (millis() - lastUpdate) > WEATHER_UPDATE_INTERVAL;
+    // With deep sleep, we track updates differently using RTC memory
+    // This function is kept for compatibility but not used
+    return (millis() - lastUpdate) > (WEATHER_UPDATE_MIN * 60000UL);
   }
 
   String getTemperatureString() {

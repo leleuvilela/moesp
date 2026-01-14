@@ -93,7 +93,8 @@ enum WeatherIconType {
 };
 
 // Get icon based on condition and day/night
-const unsigned char *getWeatherIcon(const String &condition, bool isDay) {
+const unsigned char *getWeatherIcon(const char *condition, bool isDay) {
+  // Convert to lowercase for comparison
   String cond = condition;
   cond.toLowerCase();
 
