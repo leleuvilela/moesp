@@ -104,11 +104,16 @@ inline RemoteModeResponse checkRemoteMode(uint8_t *imageBuffer,
 }
 
 // Draw remote image on display
-inline void drawRemoteImage(DisplayManager &display, const uint8_t *imageBuffer,
+inline void drawRemoteImage(DisplayManager &display, uint8_t *imageBuffer,
                             size_t imageSize) {
   if (imageSize == 0) {
     Serial.println("No remote image to draw");
     return;
+  }
+
+  // Invert all bits (fix color inversion: 1=black for e-ink)
+  for (size_t i = 0; i < imageSize; i++) {
+    imageBuffer[i] = ~imageBuffer[i];
   }
 
   display.clear();
